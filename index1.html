@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shooting Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+      background: #1e1e1e;
+    }
+    .controls {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    button, select {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #444;
+      color: white;
+    }
+    button:hover, select:hover {
+      background: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <select id="difficultySelector">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+    <button id="startButton">Start Game</button>
+    <button id="restartButton" style="display: none;">Restart Game</button>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    // JavaScript code goes here
+    const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Canvas Size
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Game Elements
+let shooter, bullets, targets, score, gameOver, difficulty;
+let targetSpeed, targetSpawnRate;
+
+const startButton = document.getElementById('startButton');
+const restartButton = document.getElementById('restartButton');
+const difficultySelector = document.getElementById('difficultySelector');
+
+// Initialize Game Variables
+function initializeGame() {
+  shooter = { x: canvas.width / 2, y: canvas.height - 50, width: 50, height: 20 };
+  bullets = [];
+  targets = [];
+  score = 0;
+  gameOver = false;
+  setDifficulty(difficultySelector.value);
+}
+
+// Set Difficulty Levels
+function setDifficulty(level) {
+  if (level === "easy") {
+    targetSpeed = 1.5;
+    targetSpawnRate = 1500; // 1.5 seconds
+  } else if (level === "medium") {
+    targetSpeed = 3;
+    targetSpawnRate = 1000; // 1 second
+  } else if (level === "hard") {
+    targetSpeed = 5;
+    targetSpawnRate = 700; // 0.7 seconds
+  }
+}
+
+// Shooter Movement
+document.addEventListener('mousemove', (e) => {
+  if (!gameOver) {
+    shooter.x = e.clientX - shooter.width / 2;
+  }
+});
+
+// Shoot Bullets
+document.addEventListener('click', () => {
+  if (!gameOver) {
+    bullets.push({ x: shooter.x + shooter.width / 2 - 5, y: shooter.y, width: 5, height: 10 });
+  }
+});
+
+// Spawn Targets
+function spawnTarget() {
+  const size = Math.random() * 40 + 20;
+  targets.push({
+    x: Math.random() * (canvas.width - size),
+    y: 0,
+    width: size,
+    height: size,
+    speed: targetSpeed,
+  });
+}
+
+// Check Collision
+function isColliding(rect1, rect2) {
+  return (
+    rect1.x < rect2.x + rect2.width &&
+    rect1.x + rect1.width > rect2.x &&
+    rect1.y < rect2.y + rect2.height &&
+    rect1.y + rect1.height > rect2.y
+  );
+}
+
+// Game Loop
+function gameLoop() {
+  if (gameOver) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw Shooter
+  ctx.fillStyle = "white";
+  ctx.fillRect(shooter.x, shooter.y, shooter.width, shooter.height);
+
+  // Update and Draw Bullets
+  bullets.forEach((bullet, index) => {
+    bullet.y -= 5;
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+
+    if (bullet.y < 0) bullets.splice(index, 1);
+  });
+
+  // Update and Draw Targets
+  targets.forEach((target, index) => {
+    target.y += target.speed;
+    ctx.fillStyle = "red";
+    ctx.fillRect(target.x, target.y, target.width, target.height);
+
+    bullets.forEach((bullet, bulletIndex) => {
+      if (isColliding(bullet, target)) {
+        targets.splice(index, 1);
+        bullets.splice(bulletIndex, 1);
+        score += 10;
+      }
+    });
+
+    if (target.y + target.height > canvas.height) {
+      gameOver = true;
+    }
+  });
+
+  // Display Score
+  ctx.fillStyle = "white";
+  ctx.font = "24px Arial";
+  ctx.fillText("Score: " + score, 10, 30);
+
+  if (!gameOver) {
+    requestAnimationFrame(gameLoop);
+  } else {
+    ctx.fillStyle = "red";
+    ctx.font = "48px Arial";
+    ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
+    restartButton.style.display = "block";
+  }
+}
+
+// Event Listeners for Buttons
+startButton.addEventListener('click', () => {
+  initializeGame();
+  startButton.style.display = "none";
+  restartButton.style.display = "none";
+  spawnTarget();
+  setInterval(spawnTarget, targetSpawnRate); // Spawn Targets Periodically
+  gameLoop();
+});
+
+restartButton.addEventListener('click', () => {
+  initializeGame();
+  restartButton.style.display = "none";
+  spawnTarget();
+  setInterval(spawnTarget, targetSpawnRate); // Spawn Targets Periodically
+  gameLoop();
+});
+
+// Set Initial Difficulty
+difficultySelector.addEventListener('change', () => {
+  setDifficulty(difficultySelector.value);
+});
+
+
+
+
+
+// Shooter Movement for Mobile
+document.addEventListener('touchmove', (e) => {
+  const touch = e.touches[0];
+  if (!gameOver) {
+    shooter.x = touch.clientX - shooter.width / 2;
+  }
+});
+
+// Shoot Bullets on Tap
+document.addEventListener('touchstart', () => {
+  if (!gameOver) {
+    bullets.push({ x: shooter.x + shooter.width / 2 - 5, y: shooter.y, width: 5, height: 10 });
+  }
+});
+
+
+
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas(); // Initialize canvas size on load
+
+  </script>
+</body>
+</html>
